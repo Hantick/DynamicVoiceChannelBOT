@@ -1,6 +1,10 @@
 ﻿
+using Discord.WebSocket;
+using DynamicVoiceChannelBOT.Handlers;
+using DynamicVoiceChannelBOT.Services;
+using DynamicVoiceChannelBOT.Storage;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
@@ -27,19 +31,65 @@ namespace DynamicVoiceChannelBOT
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
-
+                    services.AddSingleton<DiscordBot>();
+                    services.AddTransient<IDataStorage, JsonStorage>();
+                    services.AddScoped<GuildConfigService>();
+                    services.AddScoped<SlashCommandHandler>();
+                    services.AddScoped<VoiceChannelHandler>();
                 })
                 .UseSerilog()
                 .Build();
 
 
             Log.Logger.Information("Application starting...");
+
+            var discordBot = ActivatorUtilities.CreateInstance<DiscordBot>(host.Services);
+            _ = discordBot.Start();
+            HandleInput(discordBot);
         }
 
-        static void BuildConfig(IConfigurationBuilder builder)
+        private static void BuildConfig(IConfigurationBuilder builder)
         {
             builder.SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+        }
+
+        private static void HandleInput(DiscordBot bot)
+        {
+            while (true)
+            {
+                switch (Console.ReadKey().KeyChar)
+                {
+                    case 'q':
+                        {
+                            ClearCurrentConsoleLine();
+                            Console.WriteLine("Exit program (q)?");
+                            var choice2 = Console.ReadKey().KeyChar;
+                            switch (choice2)
+                            {
+                                case 'q':
+                                    ClearCurrentConsoleLine();
+                                    bot.Stop();
+                                    break;
+                                default:
+                                    ClearCurrentConsoleLine();
+                                    break;
+                            }
+
+                            break;
+                        }
+                    default:
+                        ClearCurrentConsoleLine();
+                        break;
+                }
+            }
+        }
+        public static void ClearCurrentConsoleLine()
+        {
+            int currentLineCursor = Console.CursorTop;
+            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, currentLineCursor);
         }
     }
 }
