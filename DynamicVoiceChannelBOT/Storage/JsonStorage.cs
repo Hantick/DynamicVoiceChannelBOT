@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Serilog;
 
 namespace DynamicVoiceChannelBOT.Storage
 {
@@ -18,6 +19,7 @@ namespace DynamicVoiceChannelBOT.Storage
 
         public T RestoreObject<T>(string key)
         {
+#pragma warning disable CS8603 // Possible null reference return.
             if (!File.Exists($"{key}.json") && !File.Exists(key))
                 return default;
             string json;
@@ -27,12 +29,17 @@ namespace DynamicVoiceChannelBOT.Storage
                 json = File.ReadAllText($"{key}.json").TrimEnd();
             var obj = JsonConvert.DeserializeObject<T>(json);
             return obj;
+#pragma warning restore CS8603 // Possible null reference return.
         }
 
         public void StoreObject(object obj, string key)
         {
             var file = $"{key}.json";
-            Directory.CreateDirectory(Path.GetDirectoryName(file));
+            var path = Path.GetDirectoryName(file);
+
+#pragma warning disable CS8604 // Possible null reference argument.
+            Directory.CreateDirectory(path);
+#pragma warning restore CS8604 // Possible null reference argument.
             var json = JsonConvert.SerializeObject(obj, Formatting.Indented);
             File.WriteAllText(file, json);
         }

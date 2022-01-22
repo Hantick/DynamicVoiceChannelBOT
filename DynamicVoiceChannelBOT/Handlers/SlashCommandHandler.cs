@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using DynamicVoiceChannelBOT.Models;
 using DynamicVoiceChannelBOT.Services;
 using DynamicVoiceChannelBOT.Storage;
+using Serilog;
 
 namespace DynamicVoiceChannelBOT.Handlers
 {
@@ -19,7 +20,7 @@ namespace DynamicVoiceChannelBOT.Handlers
             _guildConfigService = guildConfigService;
         }
 
-        public async Task OnSlashCommand(SocketSlashCommand command)
+        public Task OnSlashCommand(SocketSlashCommand command)
         {
             switch (command.CommandName)
             {
@@ -30,13 +31,16 @@ namespace DynamicVoiceChannelBOT.Handlers
                     HandleAddChannels(command);
                     break;
             }
+            return Task.CompletedTask;
         }
 
         private void HandleAddChannels(SocketSlashCommand command)
         {
-            var channel = (SocketGuildChannel)command.Data.Options.FirstOrDefault(c => c.Type == Discord.ApplicationCommandOptionType.Channel).Value;
-            if (channel == null) return;
+            var channelType = command.Data?.Options
+                .FirstOrDefault(c => c.Type == ApplicationCommandOptionType.Channel);
+            if (channelType == null) return;
 
+            var channel = (SocketGuildChannel)channelType.Value;
             var guildId = channel.Guild.Id;
             var config = _guildConfigService.GetGuildConfig(guildId);
             if (channel.GetChannelType() == ChannelType.Text)
@@ -62,14 +66,21 @@ namespace DynamicVoiceChannelBOT.Handlers
 
         private void HandleChannels(SocketSlashCommand command)
         {
-            var guildId = (command.Channel as SocketGuildChannel)?.Guild.Id;
+            var guildId = (command.Channel as SocketGuildChannel)?.Guild?.Id;
+            if (guildId == null)
+            {
+                Log.Warning("No guild retrieved from executing channels slash command.");
+                return;
+            }
             var config = _guildConfigService.GetGuildConfig(guildId.Value);
 
             if (config == null) throw new NullReferenceException($"No config file found for Guild {guildId.Value}");
             if (config.EnabledVoiceChannels == null || config.EnabledVoiceChannels.Count == 0)
                 command.RespondAsync("There are no channels set yet.");
 
+#pragma warning disable CS8604 // Possible null reference argument.
             command.RespondAsync(String.Join("\n", config.EnabledVoiceChannels.Select(v => MentionUtils.MentionChannel(v))));
+#pragma warning restore CS8604 // Possible null reference argument.
         }
     }
 }

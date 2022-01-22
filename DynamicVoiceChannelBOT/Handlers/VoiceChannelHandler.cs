@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using DynamicVoiceChannelBOT.Services;
+using Serilog;
 
 namespace DynamicVoiceChannelBOT.Handlers
 {
@@ -13,38 +14,88 @@ namespace DynamicVoiceChannelBOT.Handlers
             _guildConfigService = guildConfigService;
         }
 
-        internal async Task HandleVoiceStateUpdated(SocketUser user, SocketVoiceState voiceState, SocketVoiceState afterVoiceState)
+        internal async Task HandleVoiceStateUpdated(SocketUser user, SocketVoiceState beforeVoiceState, SocketVoiceState afterVoiceState)
         {
-            var voiceChannel = voiceState.VoiceChannel ?? afterVoiceState.VoiceChannel; //Get first voiceState then afterVoice state
-            var guildId = voiceChannel.Guild.Id;
-            var enabledChannels = _guildConfigService.GetGuildConfig(guildId).EnabledVoiceChannels;
-            if (!enabledChannels.Contains(voiceChannel.Id)) return;
+            var guildId = beforeVoiceState.VoiceChannel?.Guild.Id ?? afterVoiceState.VoiceChannel?.Guild.Id;
+            if (!guildId.HasValue)
+            {
+                Log.Warning("Unable to define a guild from voice channels states.");
+                return;
+            }
 
-            if (voiceChannel == null) return;
+            var enabledChannels = _guildConfigService.GetGuildConfig(guildId.Value).EnabledVoiceChannels;
+            if (!enabledChannels.Any()) return;
 
-            //if (voiceChannel.Id == 802905505365491743 && voiceChannel.Users.Count > 0)
-            //{
-            //    await voiceChannel.ConnectAsync(false, true);
-            //}
-            //else if(voiceChannel.Id == 802905505365491743 && voiceChannel.Users.Count == 0)
-            //{
-            //    await voiceChannel.DisconnectAsync();
-            //}
+            // User joined the channel
+            if (afterVoiceState.VoiceChannel != null)
+            {
+                var possibleVoiceChannelToCopy = afterVoiceState.VoiceChannel;
+                if (possibleVoiceChannelToCopy.UserLimit != null
+                    && enabledChannels.Contains(possibleVoiceChannelToCopy.Id))
+                {
+                    await CloneChannelIfNeeded(afterVoiceState.VoiceChannel);
+                }
+            }
+            // User leaved the channel
+            if (beforeVoiceState.VoiceChannel != null)
+            {
+                var possibleChannelToDelete = beforeVoiceState.VoiceChannel;
+                if (possibleChannelToDelete.Name.EndsWith("💨")
+                    && possibleChannelToDelete.UserLimit != null
+                    && (possibleChannelToDelete.Users == null
+                    || possibleChannelToDelete.Users.Count == 0))
+                {
+                    await possibleChannelToDelete.DeleteAsync();
+                    //await DeleteDuplicatedChannelsAsync(possibleChannelToDelete.Guild);
+                }
+            }
+        }
 
-            await DeleteDuplicatedChannelsAsync(voiceChannel.Guild);
-
-            if (voiceChannel.UserLimit < voiceChannel?.Users?.Count
-                && voiceChannel.Guild.VoiceChannels.Any(c => c.Name == voiceChannel?.Name && c.Users?.Count < c.UserLimit))
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+        private async Task CloneChannelIfNeeded(SocketVoiceChannel possibleVoiceChannelToCopy)
+        {
+            if (possibleVoiceChannelToCopy.UserLimit < possibleVoiceChannelToCopy?.Users?.Count
+                && possibleVoiceChannelToCopy.Guild.VoiceChannels
+                .Any(c => c.Name == possibleVoiceChannelToCopy?.Name + "💨" && c.Users?.Count < c.UserLimit))
                 return;
 
-            await voiceChannel.Guild.CreateVoiceChannelAsync(voiceChannel.Name, new Action<VoiceChannelProperties>((VoiceChannelProperties) =>
+            await possibleVoiceChannelToCopy.Guild.CreateVoiceChannelAsync(possibleVoiceChannelToCopy.Name + "💨",
+                new Action<VoiceChannelProperties>((newVoiceChannel) =>
+                {
+                    newVoiceChannel.Bitrate = possibleVoiceChannelToCopy.Bitrate;
+                    newVoiceChannel.CategoryId = possibleVoiceChannelToCopy.CategoryId;
+                    newVoiceChannel.Name = possibleVoiceChannelToCopy.Name + "💨";
+                    newVoiceChannel.Position = possibleVoiceChannelToCopy.Position;
+                    newVoiceChannel.UserLimit = possibleVoiceChannelToCopy.UserLimit;
+                }));
+        }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+
+        private async Task CheckAndDeleteDuplicatedChannels(SocketGuild guild)
+        {
+            var duplicateChs = guild.VoiceChannels.GroupBy(x => x.Name)
+               .Where(x => x.Count() > 1)
+               .Select(x => new { Name = x.Key, chs = x.ToList() }).ToList();
+
+            if (duplicateChs.Count == 0) return;
+
+            foreach (var dupCh in duplicateChs)
             {
-                VoiceChannelProperties.Bitrate = voiceChannel.Bitrate;
-                VoiceChannelProperties.CategoryId = voiceChannel.CategoryId;
-                VoiceChannelProperties.Name = voiceChannel.Name + "💨";
-                VoiceChannelProperties.Position = voiceChannel.Position;
-                VoiceChannelProperties.UserLimit = voiceChannel.UserLimit;
-            }));
+                var emptyDupChs = dupCh.chs.Where(c => c.Users.Count == 0).ToList();
+                if (emptyDupChs.Count == 0 || emptyDupChs.Count == 1)
+                {
+                    continue;
+                }
+                else if (emptyDupChs.Count > 1)
+                {
+                    emptyDupChs.RemoveAt(0);
+                    foreach (var ch in emptyDupChs)
+                    {
+                        if (ch.Users.Count > 0) continue;
+                        await ch.DeleteAsync();
+                    }
+                }
+            }
 
         }
 
@@ -73,7 +124,6 @@ namespace DynamicVoiceChannelBOT.Handlers
                     }
                 }
             }
-
         }
     }
 }

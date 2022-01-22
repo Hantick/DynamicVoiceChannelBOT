@@ -99,7 +99,7 @@ namespace DynamicVoiceChannelBOT
                 _client.Log += LogHandler.OnLogAsync;
                 _client.UserVoiceStateUpdated += _voiceChannelHandler.HandleVoiceStateUpdated;
                 _client.SlashCommandExecuted += _slashCommandHandler.OnSlashCommand;
-                _client.Ready += OnReadyAsync;
+                _client.Ready += OnReady;
                 _client.JoinedGuild += OnJoinedGuild;
                 await _client.StartAsync();
 
@@ -115,13 +115,14 @@ namespace DynamicVoiceChannelBOT
             }
         }
 
-        private async Task OnJoinedGuild(SocketGuild guild)
+        private Task OnJoinedGuild(SocketGuild guild)
         {
             SendWelcomeMessage(guild);
             CreateGuildConfigFile(guild.Id);
+            return Task.CompletedTask;
         }
 
-        private async Task OnReadyAsync()
+        private Task OnReady()
         {
             foreach (var guild in _client.Guilds)
             {
@@ -130,6 +131,7 @@ namespace DynamicVoiceChannelBOT
                 CreateGuildSlashCommands(guild);
                 CheckBotVoiceChannelsAccess(guild);
             }
+            return Task.CompletedTask;
         }
 
         private void CheckBotVoiceChannelsAccess(SocketGuild guild)
