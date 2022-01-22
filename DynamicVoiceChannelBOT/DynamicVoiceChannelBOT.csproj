@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="mkdir -p $(TargetDir)\GuildConfigs" />
+    <Exec Command="if not exist $(TargetDir)\GuildConfigs (mkdir $(TargetDir)\GuildConfigs)" />
   </Target>
 
 </Project>

@@ -100,6 +100,7 @@ namespace DynamicVoiceChannelBOT
                 _client.UserVoiceStateUpdated += _voiceChannelHandler.HandleVoiceStateUpdated;
                 _client.SlashCommandExecuted += _slashCommandHandler.OnSlashCommand;
                 _client.Ready += OnReady;
+                //_client.ChannelUpdated += //TODO(Hantick) if channel is updated update config with new name
                 _client.JoinedGuild += OnJoinedGuild;
                 await _client.StartAsync();
 
@@ -137,8 +138,11 @@ namespace DynamicVoiceChannelBOT
         private void CheckBotVoiceChannelsAccess(SocketGuild guild)
         {
             var config = _guildConfigService.GetGuildConfig(guild.Id);
-            if (config == null) SendWelcomeMessage(guild);
-            CreateGuildConfigFile(guild.Id);
+            if (config == null)
+            {
+                SendWelcomeMessage(guild);
+                CreateGuildConfigFile(guild.Id);
+            }
         }
 
         private void CreateGuildConfigFile(ulong id)
@@ -199,6 +203,11 @@ namespace DynamicVoiceChannelBOT
                 .WithName(SlashCommandHandler.COMMAND_ADD_CHANNEL)
                 .WithDescription("Adds a channel to a list of managed voice channels for dynamic creating.")
                 .AddOption("channel", ApplicationCommandOptionType.Channel, "Channel you want to add to the managed voice channels list.", true));
+
+            guildCommands.Add(
+                new SlashCommandBuilder()
+                .WithName(SlashCommandHandler.COMMAND_SYNC_CHANNELS)
+                .WithDescription("Syncs voice channels from guild with bot's configuration."));
             try
             {
                 foreach (var guildCommand in guildCommands)
