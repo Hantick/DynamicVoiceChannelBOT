@@ -29,12 +29,19 @@ namespace DynamicVoiceChannelBOT.Handlers
             // User joined the channel
             if (afterVoiceState.VoiceChannel != null)
             {
-                if (afterVoiceState.VoiceChannel.UserLimit == null) return;
-
                 var possibleVCToCopy = afterVoiceState.VoiceChannel;
-                if (enabledChannels.Any(c => c.Id == possibleVCToCopy.Id || c.Name == possibleVCToCopy.Name.Replace("💨", ""))
-                    && IsVoiceChannelFull(possibleVCToCopy)
-                    && AreCopiedChannelsFull(guild.VoiceChannels, possibleVCToCopy.Name))
+                if (possibleVCToCopy.UserLimit == null) return;
+
+                var isChannelInConfig = enabledChannels.Any(c => c.Id == possibleVCToCopy.Id || c.Name == possibleVCToCopy.Name.Replace("💨", ""));
+                if (!isChannelInConfig) return;
+                var copiedChannelsCount = guild.VoiceChannels.Where(c => c.Name == possibleVCToCopy.Name.Replace("💨", "") || c.Name == possibleVCToCopy.Name || c.Name == possibleVCToCopy.Name + "💨").ToList().Count;
+                if (IsVoiceChannelFull(possibleVCToCopy)
+                    && copiedChannelsCount <= 1)
+                {
+                    await CloneChannel(possibleVCToCopy);
+                }
+                else if (IsVoiceChannelFull(possibleVCToCopy)
+                        && AreCopiedChannelsFull(guild.VoiceChannels, possibleVCToCopy.Name))
                 {
                     await CloneChannel(possibleVCToCopy);
                 }
