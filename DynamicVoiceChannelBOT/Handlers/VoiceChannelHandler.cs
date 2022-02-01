@@ -23,6 +23,17 @@ namespace DynamicVoiceChannelBOT.Handlers
                 return;
             }
 
+            if (beforeVoiceState.IsMuted != afterVoiceState.IsMuted
+                || beforeVoiceState.IsSuppressed != afterVoiceState.IsSuppressed
+                || beforeVoiceState.IsSelfDeafened != afterVoiceState.IsSelfDeafened
+                || beforeVoiceState.IsSelfMuted != afterVoiceState.IsSelfMuted
+                || beforeVoiceState.IsDeafened != afterVoiceState.IsDeafened
+                || beforeVoiceState.IsStreaming != afterVoiceState.IsStreaming)
+            {
+                return;
+            }
+
+
             var enabledChannels = _guildConfigService.GetGuildConfig(guild.Id).EnabledVoiceChannels;
             if (enabledChannels.Count == 0) return;
 
