@@ -1,0 +1,29 @@
+node {
+  withEnv(['PATH+DOTNET=/home/pi/.dotnet']) {
+    stage('Git') {
+        git branch: 'main', credentialsId: 'dd6144ac-2d56-43aa-be82-7337937cce5c', url: 'https://github.com/Hantick/DynamicVoiceChannelBOT.git'
+    }
+    stage('Nuget restore')
+    {
+        sh 'dotnet restore DynamicVoiceChannelBOT.sln'
+    }
+    stage('Clean')
+    {
+        sh 'dotnet clean DynamicVoiceChannelBOT.sln --configuration Release'
+        
+    }
+    stage('Build')
+    {
+        sh 'dotnet build DynamicVoiceChannelBOT.sln --configuration Release --no-restore'
+    }
+    stage('Publish')
+    {
+        sh 'dotnet publish DynamicVoiceChannelBOT.sln --configuration Release --no-restore'
+    }
+    stage('Discord Info')
+    {
+        discordSend description: 'Builded successfully', footer: '', image: '', link: '', result: 'SUCCESS', thumbnail: '', title: 'DynamicChannels', webhookURL: 'https://discord.com/api/webhooks/802619082133602354/gARr07gqi3sRME6jEkKmGLe3d5hKfKsFmLWVCfH0C6o-BfQz_1lW20wqUuwEp1cpl1_d'
+    }
+
+}
+}
