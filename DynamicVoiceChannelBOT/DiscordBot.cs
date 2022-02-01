@@ -25,10 +25,12 @@ namespace DynamicVoiceChannelBOT
         private readonly SlashCommandHandler _slashCommandHandler;
 
         public DiscordBot(IConfiguration configuration,
+            CancellationTokenSource source,
             GuildConfigService guildConfigService,
             SlashCommandHandler slashCommandHandler,
             VoiceChannelHandler voiceChannelHandler)
         {
+            _source = source;
             _configuration = configuration;
             _guildConfigService = guildConfigService;
             _slashCommandHandler = slashCommandHandler;
@@ -42,7 +44,6 @@ namespace DynamicVoiceChannelBOT
 
         public async Task Start()
         {
-            _source = new CancellationTokenSource();
             try
             {
                 IsRunning = true;

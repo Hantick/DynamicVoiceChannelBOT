@@ -31,6 +31,7 @@ namespace DynamicVoiceChannelBOT
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
+                    services.AddScoped<CancellationTokenSource>();
                     services.AddSingleton<DiscordBot>();
                     services.AddTransient<IDataStorage, JsonStorage>();
                     services.AddScoped<GuildConfigService>();
