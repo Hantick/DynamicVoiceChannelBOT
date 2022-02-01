@@ -32,18 +32,18 @@ namespace DynamicVoiceChannelBOT.Handlers
                 var possibleVCToCopy = afterVoiceState.VoiceChannel;
                 if (possibleVCToCopy.UserLimit == null) return;
 
-                var isChannelInConfig = enabledChannels.Any(c => c.Id == possibleVCToCopy.Id || c.Name == possibleVCToCopy.Name.Replace("💨", ""));
-                if (!isChannelInConfig) return;
-                var copiedChannelsCount = guild.VoiceChannels.Where(c => c.Name == possibleVCToCopy.Name.Replace("💨", "") || c.Name == possibleVCToCopy.Name || c.Name == possibleVCToCopy.Name + "💨").ToList().Count;
-                if (IsVoiceChannelFull(possibleVCToCopy)
-                    && copiedChannelsCount <= 1)
+                var isChannelInConfig = enabledChannels.Any(c => c.Id == possibleVCToCopy.Id || c.Name == possibleVCToCopy.Name.Replace("💨", "") || c.Name == possibleVCToCopy.Name || c.Name == possibleVCToCopy.Name + "💨");
+                if (isChannelInConfig && IsVoiceChannelFull(possibleVCToCopy))
                 {
-                    await CloneChannel(possibleVCToCopy);
-                }
-                else if (IsVoiceChannelFull(possibleVCToCopy)
-                        && AreCopiedChannelsFull(guild.VoiceChannels, possibleVCToCopy.Name))
-                {
-                    await CloneChannel(possibleVCToCopy);
+                    var copiedChannelsCount = guild.VoiceChannels.Where(c => c.Name == possibleVCToCopy.Name.Replace("💨", "") || c.Name == possibleVCToCopy.Name || c.Name == possibleVCToCopy.Name + "💨").ToList().Count;
+                    if (copiedChannelsCount <= 1)
+                    {
+                        await CloneChannel(possibleVCToCopy);
+                    }
+                    else if (AreCopiedChannelsFull(guild.VoiceChannels, possibleVCToCopy.Name))
+                    {
+                        await CloneChannel(possibleVCToCopy);
+                    }
                 }
             }
             // User leaved the channel
@@ -112,9 +112,9 @@ namespace DynamicVoiceChannelBOT.Handlers
             }
         }
 
-        private bool IsVoiceChannelFull(SocketVoiceChannel ch) => ch.UserLimit == ch.Users.Count;
+        private bool IsVoiceChannelFull(SocketVoiceChannel ch) => ch.UserLimit <= ch.Users.Count;
         private bool IsVoiceChannelEmpty(SocketVoiceChannel ch) => ch.Users == null || ch.Users.Count == 0;
         private bool AreCopiedChannelsFull(IReadOnlyCollection<SocketVoiceChannel> voiceChannels, string channelName)
-            => voiceChannels.All(c => c.Name.Contains(channelName.Replace("💨", "")) && IsVoiceChannelFull(c));
+            => voiceChannels.Where(c => c.Name == channelName.Replace("💨", "") || c.Name == channelName || c.Name == channelName).All(c => IsVoiceChannelFull(c));
     }
 }
