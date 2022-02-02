@@ -126,6 +126,6 @@ namespace DynamicVoiceChannelBOT.Handlers
         private bool IsVoiceChannelFull(SocketVoiceChannel ch) => ch.UserLimit <= ch.Users.Count;
         private bool IsVoiceChannelEmpty(SocketVoiceChannel ch) => ch.Users == null || ch.Users.Count == 0;
         private bool AreCopiedChannelsFull(IReadOnlyCollection<SocketVoiceChannel> voiceChannels, string channelName)
-            => voiceChannels.Where(c => c.Name == channelName.Replace("💨", "") || c.Name == channelName || c.Name == channelName).All(c => IsVoiceChannelFull(c));
+            => voiceChannels.Where(c => c.Name == channelName.Replace("💨", "") || c.Name == channelName || c.Name == channelName + "💨").All(c => IsVoiceChannelFull(c));
     }
 }
