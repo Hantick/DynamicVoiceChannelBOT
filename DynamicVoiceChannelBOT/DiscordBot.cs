@@ -163,7 +163,11 @@ namespace DynamicVoiceChannelBOT
             //{
             //if (ex.DiscordCode == DiscordErrorCode.CannotSendMessageToUser)
             //{
-            await guild.SystemChannel.SendMessageAsync(null, embed: welcomeEmbed); //TODO(Hantick) Does not work always (missing permissions on OnJoinedGuild)
+            if (guild.SystemChannel != null)
+                await guild.SystemChannel.SendMessageAsync(null, embed: welcomeEmbed); //TODO(Hantick) Does not work always (missing permissions on OnJoinedGuild)
+            else if(guild.DefaultChannel != null)
+                await guild.DefaultChannel.SendMessageAsync(null, embed: welcomeEmbed); //TODO(Hantick) Does not work always (missing permissions on OnJoinedGuild)
+
             //}
             //}
         }
